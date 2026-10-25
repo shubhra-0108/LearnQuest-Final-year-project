@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Build outputs
+client/dist/
+*.egg-info/
+
+# Environment files — NEVER commit these
+.env
+.env.local
+.env.production
+server/.env
+client/.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+mongo_data/
+data/db/
+
+# Coverage
+coverage/
+.nyc_output/
+htmlcov/

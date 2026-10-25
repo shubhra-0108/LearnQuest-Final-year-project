@@ -1,0 +1,102 @@
+name: LearnQuest CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  server-tests:
+    name: Server Tests (Node.js)
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval \"db.adminCommand('ping')\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server deps
+        working-directory: server
+        run: npm ci
+
+      - name: Run server tests
+        working-directory: server
+        env:
+          MONGO_URI: mongodb://127.0.0.1:27017/learnquest_test
+          JWT_SECRET: test_jwt_secret_32_characters_long
+          COOKIE_SECRET: test_cookie_secret_long_enough
+          CRYPTO_KEY: test_crypto_key_exactly_32bytes!
+          ML_URL: http://localhost:8001
+          ML_API_KEY: test_key
+          ADMIN_EMAIL: admin@test.com
+          ADMIN_PASSWORD: Admin@Test123
+          CLIENT_ORIGIN: http://localhost:5173
+          NODE_ENV: test
+          PORT: 5001
+        run: npm test
+
+  ml-tests:
+    name: ML Service Tests (Python)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: ml-service/requirements.txt
+
+      - name: Install ML deps
+        working-directory: ml-service
+        run: pip install -r requirements.txt
+
+      - name: Run ML tests
+        working-directory: ml-service
+        env:
+          ML_API_KEY: test_key
+        run: python -m pytest tests/ -v
+
+  client-build:
+    name: Client Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install client deps
+        working-directory: client
+        run: npm ci
+
+      - name: Build client
+        working-directory: client
+        env:
+          VITE_API_BASE: /api
+        run: npm run build
+
+  docker-compose-check:
+    name: Docker Compose Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate docker-compose
+        run: docker compose config --quiet
